@@ -106,14 +106,6 @@ const app = {
             }
         })
     },
-    redo : function() {
-        audio.currentTime=0
-        audio.play();
-        audio.onplay = function() {
-            player.classList.add("playing")
-            isplay=false
-        } 
-    },
     HandleActiveSong : function(a) {
         $$('.song').forEach(function(song,index){
             if(index==app.currentIndex)
@@ -130,6 +122,14 @@ const app = {
         }
         while(newIndex==app.currentIndex)
         app.currentIndex = newIndex
+    },
+    redo : function() {
+        audio.currentTime=0
+        audio.play();
+        audio.onplay = function() {
+            player.classList.add("playing")
+            isplay=false
+        } 
     },
     HandleEvent: function() {
         const cdWidth = cd.offsetWidth
@@ -166,35 +166,26 @@ const app = {
             progess.value = (audio.currentTime / audio.duration)*100
             if(audio.ended)
             {
-                if(!app.isRepeat)
+                if(app.isRepeat)
                 {
-                    if(app.currentIndex<(app.songs.length-1))
-                    app.currentIndex++;
-                    else
-                        app.currentIndex=0;
-                    var a = app.currentIndex;
-                    app.LoadCurrentSong();
-                    app.redo()
-                    app.HandleActiveSong(a)
+                    audio.currentTime=0
+                    cdThumbAnimation.play()
+                    audio.play();
                 }
-                else
-                    audio.play()
-                if(!app.isRandom)
+                if(app.isRandom)
                 {
-                    if(app.currentIndex<(app.songs.length-1))
-                        app.currentIndex++;
-                    else
-                        app.currentIndex=0;
-                    var a = app.currentIndex;
-                    app.LoadCurrentSong();
-                    app.redo()
-                    app.HandleActiveSong()
-                }
-                else
                     app.playrandomsong()
+                }
                 app.scrollInterView()   
             }
         },
+        audio.onended = function() {
+            app.currentIndex++
+            app.LoadCurrentSong();
+            app.HandleActiveSong()
+            cdThumbAnimation.play()
+            audio.play()
+        }
         redo.onclick = function() {
             app.isRepeat = !app.isRepeat;
             if(app.isRepeat)
@@ -221,12 +212,14 @@ const app = {
                 app.redo()
                 app.HandleActiveSong()
                 app.scrollInterView()
+                cdThumbAnimation.play()
             }
             else {
                 if(app.currentIndex<(app.songs.length-1))
-                app.currentIndex++;
+                    app.currentIndex++;
                 else
                     app.currentIndex=0;
+                cdThumbAnimation.play()
                 app.LoadCurrentSong();
                 app.HandleActiveSong()
                 app.redo()
@@ -241,6 +234,7 @@ const app = {
                 app.redo()
                 app.HandleActiveSong()
                 app.scrollInterView()
+                cdThumbAnimation.play()
             }
             else
             {
@@ -248,6 +242,7 @@ const app = {
                     app.currentIndex--;
                 else
                     app.currentIndex = app.songs.length-1;
+                cdThumbAnimation.play()
                 app.LoadCurrentSong();
                 app.HandleActiveSong()
                 app.scrollInterView()
@@ -260,6 +255,7 @@ const app = {
                 song.classList.add('active')
                 app.currentIndex = index;
                 app.LoadCurrentSong();
+                cdThumbAnimation.play()
                 app.redo()
             }
         })
