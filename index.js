@@ -10,11 +10,14 @@ const playbtn = $('.btn-toggle-play')
 const player = $('.player')
 var isplay = true;
 const progess = $('.progress')
-const redo = $('.fa-redo')
+const redo = $('.btn-repeat')
 const next = $('.btn-next')
 const prev = $('.btn-prev')
+const random = $('.btn-random')
 const app = {
     currentIndex:0,
+    isRepeat :false,
+    isRandom:false,
     songs : [
         {
             name:'Định Mệnh',
@@ -55,8 +58,8 @@ const app = {
         {
             name:'Thương mấy cũng là người dưng',
             singer:'Noo Phước Thịnh',
-            path:'songs/song7.mp3',
-            image:''
+            path:'songs/song9.mp3',
+            image:'https://photo-resize-zmp3.zmdcdn.me/w240_r1x1_webp/cover/8/f/0/d/8f0da549f6cf94288361aac93d05d284.jpg'
         },
         {
             name:'Cơn mơ băng giá',
@@ -79,9 +82,9 @@ const app = {
     ],
 
     render : function() {
-        var htmls  = this.songs.map(function(song) {
+        var htmls  = this.songs.map(function(song,index) {
             return `
-                <div class="song">
+                <div class="song ${app.currentIndex===index?'active':''}">
                     <div class="thumb" style="background-image: url('${song.image}')">
                     </div>
                     <div class="body">
@@ -111,6 +114,23 @@ const app = {
             isplay=false
         } 
     },
+    HandleActiveSong : function(a) {
+        $$('.song').forEach(function(song,index){
+            if(index==app.currentIndex)
+            {
+                $('.song.active').classList.remove('active')
+                song.classList.add('active')
+            }
+        })
+    },
+    playrandomsong: function() {
+        let newIndex
+        do {
+            newIndex = Math.floor(Math.random()*this.songs.length)
+        }
+        while(newIndex==app.currentIndex)
+        app.currentIndex = newIndex
+    },
     HandleEvent: function() {
         const cdWidth = cd.offsetWidth
         document.onscroll = function() {
@@ -118,7 +138,14 @@ const app = {
             const newcdwidth  = cdWidth-onscrollTop;
             cd.style.width = newcdwidth>0?newcdwidth+'px':0
             cd.style.opacity = newcdwidth/cdWidth
-        },
+        }
+        const cdThumbAnimation = cdThumb.animate([
+            {transform :'rotate(360deg)'}
+        ],{
+            duration: 10000,
+            iterations:Infinity
+        })
+        cdThumbAnimation.pause()
         playbtn.onclick = function() {
             if(isplay)
                 audio.play()
@@ -127,43 +154,110 @@ const app = {
             audio.onplay = function() {
                 player.classList.add("playing")
                 isplay=false
+                cdThumbAnimation.play()
             } 
             audio.onpause = function() {
                 player.classList.remove("playing")
                 isplay=true
+                cdThumbAnimation.pause()
             }
-        },
+        }
         audio.ontimeupdate = function() {
             progess.value = (audio.currentTime / audio.duration)*100
             if(audio.ended)
-                app.redo()
+            {
+                if(!app.isRepeat)
+                {
+                    if(app.currentIndex<(app.songs.length-1))
+                    app.currentIndex++;
+                    else
+                        app.currentIndex=0;
+                    var a = app.currentIndex;
+                    app.LoadCurrentSong();
+                    app.redo()
+                    app.HandleActiveSong(a)
+                }
+                else
+                    audio.play()
+                if(!app.isRandom)
+                {
+                    if(app.currentIndex<(app.songs.length-1))
+                        app.currentIndex++;
+                    else
+                        app.currentIndex=0;
+                    var a = app.currentIndex;
+                    app.LoadCurrentSong();
+                    app.redo()
+                    app.HandleActiveSong()
+                }
+                else
+                    app.playrandomsong()
+                app.scrollInterView()   
+            }
         },
         redo.onclick = function() {
-            app.redo()
+            app.isRepeat = !app.isRepeat;
+            if(app.isRepeat)
+                this.classList.add('active')
+            else
+                this.classList.remove('active')
+        },
+        random.onclick = function() {
+            app.isRandom = !app.isRandom;
+            if(app.isRandom)
+                this.classList.add('active')
+            else
+                this.classList.remove('active')
         },
         progess.onchange = function(){
             audio.currentTime = (progess.value*audio.duration)/100
             progess.value = (progess.value*audio.duration)/100
         },
         next.onclick = function() {
-            if(app.currentIndex<(app.songs.length-1))
+            if(app.isRandom)
+            {
+                app.playrandomsong()
+                app.LoadCurrentSong();
+                app.redo()
+                app.HandleActiveSong()
+                app.scrollInterView()
+            }
+            else {
+                if(app.currentIndex<(app.songs.length-1))
                 app.currentIndex++;
-            else
-                app.currentIndex=0;
-            app.LoadCurrentSong();
-            app.redo()
+                else
+                    app.currentIndex=0;
+                app.LoadCurrentSong();
+                app.HandleActiveSong()
+                app.redo()
+                app.scrollInterView()
+            }
         }
         prev.onclick = function() {
-            if(app.currentIndex>0)
-                app.currentIndex--;
+            if(app.isRandom)
+            {
+                app.playrandomsong()
+                app.LoadCurrentSong();
+                app.redo()
+                app.HandleActiveSong()
+                app.scrollInterView()
+            }
             else
-                app.currentIndex = app.songs.length-1;
-            app.LoadCurrentSong();
-            app.redo()
+            {
+                if(app.currentIndex>0)
+                    app.currentIndex--;
+                else
+                    app.currentIndex = app.songs.length-1;
+                app.LoadCurrentSong();
+                app.HandleActiveSong()
+                app.scrollInterView()
+                app.redo()
+            }
         }
-        const listsongs = $$('.song')
-        listsongs.forEach(function(song,index) {
+        $$('.song').forEach(function(song,index) {
             song.onclick = function() {
+                $('.song.active').classList.remove('active')
+                song.classList.add('active')
                 app.currentIndex = index;
                 app.LoadCurrentSong();
                 app.redo()
@@ -175,11 +269,16 @@ const app = {
       cdThumb.style.backgroundImage = `url('${this.currentSong.image}')`
       audio.src = this.currentSong.path
     },
+    scrollInterView: function() {
+        setTimeout(function() {
+            $('.song.active').scrollIntoView({behavior: "smooth", block: "nearest"})
+        },300)
+    },
     start :function() {
         this.defineproperties()
         this.LoadCurrentSong()
         this.render()
-        this.HandleEvent()       
+        this.HandleEvent()    
     },
 }
 app.start()
